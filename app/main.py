@@ -3,9 +3,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_jwt_auth import AuthJWT
 
-from app.models import Reciclaje, Canje, Usuario, QRToken
+from app.models import Reciclaje, HistorialCanje, Usuario, QRToken
 from app.auth import routes
-from app.routes import reciclaje
+from app.routes import reciclaje_en_cesto, reciclaje_app, canje, historial_canje
 from app.config.settings import settings
 from app.db.connection import Base, engine
 
@@ -23,9 +23,13 @@ Base.metadata.create_all(bind=engine)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-app.include_router(reciclaje.router, prefix="/reciclaje", tags=["Reciclaje"])
 app.include_router(routes.auth, prefix="/auth", tags=["Auth"])
-#app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
+app.include_router(reciclaje_en_cesto.router, prefix="/reciclaje", tags=["Reciclaje Cesto"])
+app.include_router(reciclaje_app.router, prefix="/reciclaje-app", tags=["Reciclaje App"])
+app.include_router(canje.router, prefix="/canjes", tags=["Canjes"])
+app.include_router(historial_canje.router, prefix="/historial-canje", tags=["Historial Canje"])
+
+
 
 app.add_middleware(
     CORSMiddleware,

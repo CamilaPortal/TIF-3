@@ -18,6 +18,10 @@ def register(
     if usuario_existente:
         raise HTTPException(status_code=409, detail="Correo ya registrado")
 
+    usuario_por_alias = db.query(Usuario).filter(Usuario.alias == data.alias).first()
+    if usuario_por_alias:
+        raise HTTPException(status_code=409, detail="Alias ya registrado. Por favor, elige otro.")
+
     nuevo_usuario = Usuario(
         dni=data.dni,
         alias=data.alias,

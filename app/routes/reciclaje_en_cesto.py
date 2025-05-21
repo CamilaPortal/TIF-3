@@ -1,5 +1,4 @@
 from io import BytesIO
-from urllib.parse import urlencode
 from fastapi import APIRouter, HTTPException, Depends, status
 import uuid
 import os
