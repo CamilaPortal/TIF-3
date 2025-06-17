@@ -8,6 +8,9 @@ class CanjeCreateRequest(BaseModel):
 class CanjeUpdateRequest(BaseModel):
     puntos: int = Field(..., gt=0, example=120, description="El nuevo valor de puntos para el ítem de canje.")
 
+class CanjeUpdateEstadoRequest(BaseModel):
+    is_active: bool = Field(..., description="Define si el ítem de canje está activo (true) o inactivo (false).")
+
 class CanjeItemResponse(BaseModel):
     id: int
     nombre: str

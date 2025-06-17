@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi import status
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.orm import Session
 from app.db.connection import get_db
@@ -14,14 +15,26 @@ def register(
     db: Session = Depends(get_db),
     Authorize: AuthJWT = Depends()
 ):
-    usuario_existente = db.query(Usuario).filter(Usuario.email == data.email).first()
-    if usuario_existente:
-        raise HTTPException(status_code=409, detail="Correo ya registrado")
+    usuario_por_dni = db.query(Usuario).filter(Usuario.dni == data.dni).first()
+    if usuario_por_dni:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="DNI ya registrado."
+        )
+    
+    usuario_por_email = db.query(Usuario).filter(Usuario.email == data.email).first()
+    if usuario_por_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="Correo electrónico ya registrado."
+        )
 
     usuario_por_alias = db.query(Usuario).filter(Usuario.alias == data.alias).first()
     if usuario_por_alias:
-        raise HTTPException(status_code=409, detail="Alias ya registrado. Por favor, elige otro.")
-
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="Alias ya registrado. Por favor, elige otro."
+        )
     nuevo_usuario = Usuario(
         dni=data.dni,
         alias=data.alias,

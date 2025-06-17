@@ -7,8 +7,8 @@ class Canje(Base):
     __tablename__ = "canje"
 
     id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(500), nullable=False)
-    descripcion = Column(String(255), nullable=False)
+    nombre = Column(String(255), nullable=False)
+    descripcion = Column(String(500), nullable=False)
     puntos = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     
