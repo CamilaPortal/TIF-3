@@ -9,7 +9,7 @@ from app.models.qr_token import QRToken
 from app.models.usuario import Usuario
 from app.models.reciclaje import Reciclaje
 from app.schemas.qr_token import QrTokenGenerate
-from app.schemas.reciclaje import ReciclajeConfirmQR, ReciclajeResponse 
+from app.schemas.reciclaje import ReciclajeConfirmQR, ReciclajeResponse, ReciclajeHistorialResponse
 
 router = APIRouter()
 
@@ -84,3 +84,53 @@ async def confirmar_reciclaje_por_qr_app(
         )
 
     return nuevo_reciclaje
+
+@router.get("/historial/", response_model=list[ReciclajeHistorialResponse])
+async def obtener_historial_reciclajes(
+    db: Session = Depends(get_db),
+    Authorize: AuthJWT = Depends()
+):
+    """
+    Obtiene el historial de reciclajes del usuario autenticado.
+    Incluye detalles del reciclaje y del QR token usado.
+    """
+    Authorize.jwt_required()
+    user_dni_str = Authorize.get_jwt_subject()
+    
+    try:
+        user_dni = int(user_dni_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="DNI en token JWT inválido."
+        )
+    
+    # Hacer JOIN para obtener todos los datos necesarios
+    reciclajes_query = db.query(
+        Reciclaje.id,
+        Reciclaje.puntos,
+        QRToken.used_at.label('fecha_reciclaje'),  # used_at como fecha_reciclaje
+        QRToken.peso,
+        QRToken.cantidad_botellas,
+        QRToken.id_cesto
+    ).join(
+        QRToken, Reciclaje.qr_token_id == QRToken.id
+    ).filter(
+        Reciclaje.usuario_dni == user_dni
+    ).order_by(QRToken.used_at.desc())
+    
+    reciclajes_data = reciclajes_query.all()
+    
+    # Convertir a diccionarios para que coincidan con el schema
+    historial = []
+    for r in reciclajes_data:
+        historial.append({
+            "id": r.id,
+            "puntos": r.puntos,
+            "fecha_reciclaje": r.fecha_reciclaje,
+            "peso": r.peso,
+            "cantidad_botellas": r.cantidad_botellas,
+            "id_cesto": r.id_cesto
+        })
+    
+    return historial

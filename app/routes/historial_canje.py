@@ -6,7 +6,7 @@ from app.db.connection import get_db
 from app.models.usuario import Usuario
 from app.models.canje import Canje as CanjeModel
 from app.models.historialCanje import HistorialCanje as HistorialCanjeModel
-from app.schemas.historial_canje import RealizarCanjeRequest, HistorialCanjeResponse
+from app.schemas.historial_canje import RealizarCanjeRequest, HistorialCanjeResponse, HistorialCanjeDetalladoResponse
 
 router = APIRouter()
 
@@ -58,3 +58,55 @@ async def realizar_canje(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al procesar el canje: {str(e)}")
 
     return nuevo_historial_canje
+
+@router.get("/", response_model=list[HistorialCanjeDetalladoResponse])
+async def obtener_historial_canjes(
+    db: Session = Depends(get_db),
+    Authorize: AuthJWT = Depends()
+):
+    """
+    Obtiene el historial completo de canjes del usuario autenticado.
+    Incluye detalles del canje realizado y la fecha.
+    """
+    Authorize.jwt_required()
+    user_dni_str = Authorize.get_jwt_subject()
+    
+    try:
+        user_dni = int(user_dni_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="DNI en token JWT inválido."
+        )
+    
+    # JOIN con la tabla Canje para obtener detalles completos
+    historial_query = db.query(
+        HistorialCanjeModel.id,
+        HistorialCanjeModel.puntos_usados,
+        HistorialCanjeModel.fecha_canje,
+        HistorialCanjeModel.usuario_dni,
+        HistorialCanjeModel.canje_id,
+        CanjeModel.nombre.label('canje_nombre'),
+        CanjeModel.descripcion.label('canje_descripcion')
+    ).join(
+        CanjeModel, HistorialCanjeModel.canje_id == CanjeModel.id
+    ).filter(
+        HistorialCanjeModel.usuario_dni == user_dni
+    ).order_by(HistorialCanjeModel.fecha_canje.desc())
+    
+    historial_data = historial_query.all()
+    
+    # Convertir a diccionarios para que coincidan con el schema
+    historial = []
+    for h in historial_data:
+        historial.append({
+            "id": h.id,
+            "puntos_usados": h.puntos_usados,
+            "fecha_canje": h.fecha_canje,
+            "usuario_dni": h.usuario_dni,
+            "canje_id": h.canje_id,
+            "canje_nombre": h.canje_nombre,
+            "canje_descripcion": h.canje_descripcion
+        })
+    
+    return historial
