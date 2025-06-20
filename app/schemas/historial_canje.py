@@ -22,7 +22,6 @@ class HistorialCanjeDetalladoResponse(BaseModel):
     fecha_canje: datetime
     usuario_dni: int
     canje_id: int
-    # Detalles del canje
     canje_nombre: str
     canje_descripcion: str
 

@@ -16,10 +16,12 @@ class UsuarioLogin(BaseModel):
 
 class UsuarioResponse(BaseModel):
     dni: int
+    alias: str
     nombre: str
     apellido: str
     telefono: int
     email: EmailStr
+    puntos_disponibles: int
 
     class Config:
         orm_mode = True
