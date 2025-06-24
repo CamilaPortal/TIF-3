@@ -31,3 +31,16 @@ class TokenResponse(BaseModel):
     dni: int
     email: EmailStr
     rol: str
+
+class UsuarioRankingResponse(BaseModel):
+    """Schema para mostrar usuarios en el ranking"""
+    posicion: int
+    alias: str
+    nombre: str
+    apellido: str
+    puntos_disponibles: int
+    total_puntos_ganados: int
+    total_reciclajes_realizados: int
+
+    class Config:
+        orm_mode = True
