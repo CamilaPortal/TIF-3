@@ -23,7 +23,6 @@ async def obtener_ranking_puntos_historicos(
     Solo incluye usuarios con rol 'user' que han reciclado al menos una vez.
     """
     
-    # Query principal - SOLO usuarios que han reciclado
     ranking_query = db.query(
         Usuario.alias,
         Usuario.nombre,
@@ -32,18 +31,17 @@ async def obtener_ranking_puntos_historicos(
         func.sum(Reciclaje.puntos).label('total_puntos_ganados'),
         func.count(Reciclaje.id).label('total_reciclajes_realizados')
     ).join(
-        Reciclaje, Usuario.dni == Reciclaje.usuario_dni  # INNER JOIN - solo usuarios con reciclajes
+        Reciclaje, Usuario.dni == Reciclaje.usuario_dni
     ).filter(
-        Usuario.rol == "user"  # Solo usuarios normales
+        Usuario.rol == "user" 
     ).group_by(
         Usuario.dni, Usuario.alias, Usuario.nombre, Usuario.apellido, Usuario.puntos_disponibles
     ).order_by(
-        desc(func.sum(Reciclaje.puntos))  # Ordenar por puntos históricos
+        desc(func.sum(Reciclaje.puntos))
     ).limit(limite)
     
     resultados = ranking_query.all()
     
-    # Construir la respuesta con posiciones
     ranking = []
     for i, usuario in enumerate(resultados, 1):
         ranking.append({
@@ -58,50 +56,6 @@ async def obtener_ranking_puntos_historicos(
     
     return ranking
 
-@router.get("/puntos-disponibles/", response_model=list[UsuarioRankingResponse])
-async def obtener_ranking_puntos_disponibles(
-    limite: int = Query(default=10, ge=1, le=100, description="Número de usuarios a mostrar en el ranking"),
-    db: Session = Depends(get_db)
-):
-    """
-    Obtiene el ranking de usuarios ordenados por puntos disponibles actuales.
-    Solo incluye usuarios que han reciclado al menos una vez.
-    """
-    
-    # Query principal - SOLO usuarios que han reciclado
-    ranking_query = db.query(
-        Usuario.alias,
-        Usuario.nombre,
-        Usuario.apellido,
-        Usuario.puntos_disponibles,
-        func.sum(Reciclaje.puntos).label('total_puntos_ganados'),
-        func.count(Reciclaje.id).label('total_reciclajes_realizados')
-    ).join(
-        Reciclaje, Usuario.dni == Reciclaje.usuario_dni  # INNER JOIN - solo usuarios con reciclajes
-    ).filter(
-        Usuario.rol == "user"  # Solo usuarios normales
-    ).group_by(
-        Usuario.dni, Usuario.alias, Usuario.nombre, Usuario.apellido, Usuario.puntos_disponibles
-    ).order_by(
-        desc(Usuario.puntos_disponibles)  # Ordenar por puntos disponibles
-    ).limit(limite)
-    
-    resultados = ranking_query.all()
-    
-    # Construir la respuesta con posiciones
-    ranking = []
-    for i, usuario in enumerate(resultados, 1):
-        ranking.append({
-            "posicion": i,
-            "alias": usuario.alias,
-            "nombre": usuario.nombre,
-            "apellido": usuario.apellido,
-            "puntos_disponibles": usuario.puntos_disponibles,
-            "total_puntos_ganados": usuario.total_puntos_ganados,
-            "total_reciclajes_realizados": usuario.total_reciclajes_realizados
-        })
-    
-    return ranking
 
 @router.get("/mi-posicion-historica/")
 async def obtener_mi_posicion_historica(
@@ -123,7 +77,6 @@ async def obtener_mi_posicion_historica(
             detail="DNI en token JWT inválido."
         )
     
-    # Obtener información del usuario actual
     usuario_actual = db.query(Usuario).filter(Usuario.dni == user_dni).first()
     if not usuario_actual:
         raise HTTPException(
@@ -131,27 +84,23 @@ async def obtener_mi_posicion_historica(
             detail="Usuario no encontrado."
         )
     
-    # Verificar que el usuario sea del tipo 'user'
     if usuario_actual.rol != "user":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Los administradores no participan en rankings."
         )
     
-    # Obtener mis puntos históricos
     mis_puntos_historicos = db.query(func.coalesce(func.sum(Reciclaje.puntos), 0)).filter(
         Reciclaje.usuario_dni == user_dni
     ).scalar()
     
-    # Obtener mis reciclajes realizados
     total_reciclajes_realizados = db.query(func.count(Reciclaje.id)).filter(
         Reciclaje.usuario_dni == user_dni
     ).scalar()
     
-    # Verificar si el usuario ha reciclado al menos una vez
     if mis_puntos_historicos == 0 or total_reciclajes_realizados == 0:
         return {
-            "mi_posicion_historica": None,  # Sin posición si no ha reciclado
+            "mi_posicion_historica": None,
             "total_usuarios_activos": db.query(
                 func.count(func.distinct(Reciclaje.usuario_dni))
             ).join(Usuario, Reciclaje.usuario_dni == Usuario.dni).filter(
@@ -160,11 +109,10 @@ async def obtener_mi_posicion_historica(
             "mis_puntos_disponibles": usuario_actual.puntos_disponibles,
             "mis_puntos_historicos": 0,
             "mis_reciclajes_realizados": 0,
-            "porcentaje_superior": None,  # Sin porcentaje si no compite
+            "porcentaje_superior": None,
             "mensaje": "Debes reciclar al menos una vez para aparecer en el ranking."
         }
     
-    # Si el usuario SÍ ha reciclado, calcular posición normal
     usuarios_con_mas_puntos_historicos = db.query(
         func.count(func.distinct(Reciclaje.usuario_dni))
     ).join(

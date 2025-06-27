@@ -37,36 +37,3 @@ async def obtener_perfil_usuario(
         )
     
     return usuario
-
-@router.get("/puntos/", response_model=dict)
-async def obtener_puntos_usuario(
-    db: Session = Depends(get_db),
-    Authorize: AuthJWT = Depends()
-):
-    """
-    Obtiene únicamente los puntos disponibles del usuario autenticado.
-    Endpoint ligero para consultas rápidas de saldo.
-    """
-    Authorize.jwt_required()
-    user_dni_str = Authorize.get_jwt_subject()
-    
-    try:
-        user_dni = int(user_dni_str)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="DNI en token JWT inválido."
-        )
-    
-    usuario = db.query(Usuario).filter(Usuario.dni == user_dni).first()
-    
-    if not usuario:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado."
-        )
-    
-    return {
-        "dni": usuario.dni,
-        "puntos_disponibles": usuario.puntos_disponibles
-    }

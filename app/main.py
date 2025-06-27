@@ -5,7 +5,7 @@ from fastapi_jwt_auth import AuthJWT
 
 from app.models import Reciclaje, HistorialCanje, Usuario, QRToken
 from app.auth import routes
-from app.routes import reciclaje_en_cesto, reciclaje_app, canje, historial_canje, usuario, ranking
+from app.routes import reciclaje_en_cesto, reciclaje_app, canje, historial_canje, usuario, ranking, empresa
 from app.config.settings import settings
 from app.db.connection import Base, engine
 
@@ -30,6 +30,7 @@ app.include_router(canje.router, prefix="/canjes", tags=["Canjes"])
 app.include_router(historial_canje.router, prefix="/historial-canje", tags=["Historial Canje"])
 app.include_router(usuario.router, prefix="/usuario", tags=["Usuario"])
 app.include_router(ranking.router, prefix="/ranking", tags=["Ranking"])
+app.include_router(empresa.router, prefix="/empresa", tags=["Empresa"]) 
 
 
 

@@ -16,6 +16,22 @@ class CanjeItemResponse(BaseModel):
     nombre: str
     descripcion: str
     puntos: int
+    empresa_id: int
+    empresa_nombre: str 
+
+    class Config:
+        orm_mode = True
+
+class CanjeItemDetalladoResponse(BaseModel):
+    """Response con información completa de la empresa"""
+    id: int
+    nombre: str
+    descripcion: str
+    puntos: int
+    empresa_id: int
+    empresa_nombre: str
+    empresa_direccion: str
+    empresa_telefono: str
 
     class Config:
         orm_mode = True

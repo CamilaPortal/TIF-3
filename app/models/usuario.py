@@ -1,5 +1,5 @@
 from passlib.hash import bcrypt
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.connection import Base
 
@@ -16,6 +16,9 @@ class Usuario(Base):
     password = Column(String(100), nullable=False) 
     telefono = Column(Integer, nullable=False)
     rol = Column(String(10), nullable=True)
+
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=True)
+    empresa = relationship("Empresa", back_populates="usuarios_empresa")
 
     historial_canjes = relationship("HistorialCanje", back_populates="usuario")
     reciclajes = relationship("Reciclaje", back_populates="usuario")

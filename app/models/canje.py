@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.connection import Base
@@ -12,3 +12,5 @@ class Canje(Base):
     puntos = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
+    empresa = relationship("Empresa", back_populates="canjes")
