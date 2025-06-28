@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
 
 class EmpresaCreateRequest(BaseModel):
@@ -30,3 +30,19 @@ class EmpresaUsuarioCreateRequest(BaseModel):
     email: EmailStr
     password: Optional[str] = None
     empresa_id: int
+
+
+class CambiarPasswordRequest(BaseModel):
+    password_actual: str = Field(..., min_length=1, description="Contraseña actual")
+    password_nueva: str = Field(..., min_length=6, description="Nueva contraseña (mínimo 6 caracteres)")
+    confirmar_password: str = Field(..., min_length=6, description="Confirmación de la nueva contraseña")
+
+    @validator('confirmar_password')
+    def passwords_match(cls, v, values, **kwargs):
+        if 'password_nueva' in values and v != values['password_nueva']:
+            raise ValueError('Las contraseñas no coinciden')
+        return v
+
+class CambiarPasswordResponse(BaseModel):
+    message: str
+    timestamp: str

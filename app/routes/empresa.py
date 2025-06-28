@@ -11,7 +11,7 @@ from app.models.empresa import Empresa
 from app.models.usuario import Usuario
 from app.models.canje import Canje as CanjeModel
 from app.models.historialCanje import HistorialCanje as HistorialCanjeModel
-from app.schemas.empresa import EmpresaCreateRequest, EmpresaResponse, EmpresaUsuarioCreateRequest
+from app.schemas.empresa import EmpresaCreateRequest, EmpresaResponse, EmpresaUsuarioCreateRequest, CambiarPasswordRequest, CambiarPasswordResponse
 from app.schemas.validacion_qr_empresa import ValidarQRRequest, ConfirmarEntregaRequest
 from app.auth.dependencies import role_required, empresa_required
 from app.services.email_service import EmailService
@@ -304,4 +304,82 @@ async def confirmar_entrega_premio(
             "puntos_canjeados": historial_canje.puntos_usados
         },
         "qr_status": "USADO - No se puede volver a utilizar"
+    }
+
+
+@router.put("/cambiar-password/")
+async def cambiar_password_empresa(
+    password_data: CambiarPasswordRequest,
+    empresa_data: dict = Depends(empresa_required()),
+    db: Session = Depends(get_db)
+):
+    """
+    Permite a un usuario empresa cambiar su contraseña.
+    Requiere la contraseña actual para validar la identidad.
+    """
+    
+    usuario = empresa_data["usuario"]
+    
+    if not usuario.check_password(password_data.password_actual):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="La contraseña actual es incorrecta."
+        )
+    
+    if usuario.check_password(password_data.password_nueva):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La nueva contraseña debe ser diferente a la actual."
+        )
+    
+    usuario.set_password(password_data.password_nueva)
+    
+    try:
+        db.commit()
+        db.refresh(usuario)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar la contraseña: {str(e)}"
+        )
+    
+    return {
+        "message": "Contraseña actualizada exitosamente",
+        "timestamp": datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+    }
+
+@router.get("/mi-perfil/")
+async def obtener_mi_perfil_empresa(
+    empresa_data: dict = Depends(empresa_required()),
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene el perfil del usuario empresa autenticado.
+    Incluye información personal y de la empresa asociada.
+    """
+    
+    usuario = empresa_data["usuario"]
+    
+    empresa = db.query(Empresa).filter(Empresa.id == usuario.empresa_id).first()
+    
+    return {
+        "usuario_info": {
+            "dni": usuario.dni,
+            "alias": usuario.alias,
+            "nombre": usuario.nombre,
+            "apellido": usuario.apellido,
+            "email": usuario.email,
+            "telefono": usuario.telefono,
+            "rol": usuario.rol
+        },
+        "empresa_info": {
+            "id": empresa.id,
+            "nombre": empresa.nombre,
+            "descripcion": empresa.descripcion,
+            "direccion": empresa.direccion,
+            "telefono": empresa.telefono,
+            "email": empresa.email,
+            "is_active": empresa.is_active
+        }
     }
