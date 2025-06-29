@@ -1,4 +1,3 @@
-# En app/routes/empresa.py - corregir el endpoint
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi_jwt_auth import AuthJWT
@@ -192,13 +191,13 @@ async def validar_qr_canje(
     if historial_canje.qr_usado:
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
-            detail=f"Este código QR ya fue utilizado el {historial_canje.fecha_uso.strftime('%d/%m/%Y %H:%M')}."
+            detail=f"Este código QR ya fue utilizado el {historial_canje.fecha_uso.strftime('%d/%m/%Y %H:%M')}"
         )
     
     if historial_canje.fecha_vencimiento < datetime.now():
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
-            detail=f"Este código QR venció el {historial_canje.fecha_vencimiento.strftime('%d/%m/%Y')}."
+            detail=f"Este código QR venció el {historial_canje.fecha_vencimiento.strftime('%d/%m/%Y')}"
         )
     
     if historial_canje.canje.empresa_id != empresa_data["empresa_id"]:
@@ -234,7 +233,7 @@ async def validar_qr_canje(
         "instrucciones": [
             f"Verificar DNI del usuario: {usuario.dni}",
             f"Entregar: {canje.nombre}",
-            "Confirmar la entrega usando el endpoint /confirmar-entrega/"
+            "Confirmar la entrega"
         ]
     }
 

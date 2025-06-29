@@ -9,7 +9,6 @@ from app.config.settings import settings
 
 class EmailService:
     def __init__(self):
-        # Usar configuración centralizada
         self.smtp_server = settings.smtp_server
         self.smtp_port = settings.smtp_port
         self.smtp_user = settings.smtp_user
