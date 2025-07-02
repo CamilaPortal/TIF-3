@@ -277,7 +277,6 @@ async def confirmar_entrega_premio(
     
     historial_canje.qr_usado = True
     historial_canje.fecha_uso = datetime.now()
-    historial_canje.empresa_validadora_id = empresa_data["empresa_id"]
     
     try:
         db.commit()

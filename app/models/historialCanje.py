@@ -15,9 +15,6 @@ class HistorialCanje(Base):
     qr_usado = Column(Boolean, default=False, nullable=False)
     fecha_uso = Column(DateTime(timezone=True), nullable=True)
 
-    empresa_validadora_id = Column(Integer, ForeignKey("empresas.id"), nullable=True)
-    empresa_validadora = relationship("Empresa")
-
     usuario_dni = Column(Integer, ForeignKey("usuarios.dni"), nullable=False)
     usuario = relationship("Usuario", back_populates="historial_canjes")
 
