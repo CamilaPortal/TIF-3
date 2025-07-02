@@ -2,6 +2,7 @@ from io import BytesIO
 from fastapi import APIRouter, HTTPException, Depends, status
 import uuid
 import os
+from datetime import datetime
 from sqlalchemy.orm import Session
 from app.db.connection import get_db
 from app.models.qr_token import QRToken
@@ -36,7 +37,8 @@ async def create_qr_token_with_initial_data(
         token=generated_token_value,
         peso=qr_data.peso,
         cantidad_botellas=qr_data.cantidad_botellas,
-        is_used=qr_data.is_used
+        is_used=qr_data.is_used,
+        created_at=datetime.now(),
     )
 
     db.add(new_qr_token_db)

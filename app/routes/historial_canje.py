@@ -30,7 +30,7 @@ async def realizar_canje(
 ):
     """
     Permite a un usuario canjear sus puntos por un premio.
-    Envía código QR por email para usar en el comercio.
+    Reduce stock automáticamente y desactiva si llega a 0.
     """
     Authorize.jwt_required()
     user_dni_str = Authorize.get_jwt_subject()
@@ -59,13 +59,14 @@ async def realizar_canje(
     canje = db.query(CanjeModel).join(Empresa).filter(
         CanjeModel.id == canje_id,
         CanjeModel.is_active == True,
+        CanjeModel.stock_actual > 0,
         Empresa.is_active == True
     ).first()
     
     if not canje:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Canje no encontrado o no disponible."
+            detail="Canje no encontrado, no disponible o sin stock."
         )
 
     if usuario.puntos_disponibles < canje.puntos:
@@ -80,13 +81,17 @@ async def realizar_canje(
     nuevo_historial = HistorialCanjeModel(
         puntos_usados=canje.puntos,
         codigo_qr_canje=codigo_qr,
+        fecha_canje=datetime.now(),
         fecha_vencimiento=fecha_vencimiento,
         usuario_dni=usuario.dni,
         canje_id=canje.id
     )
 
-    usuario.puntos_disponibles -= canje.puntos
+    canje.stock_actual -= 1
+    if canje.stock_actual <= 0:
+        canje.is_active = False
 
+    usuario.puntos_disponibles -= canje.puntos
     db.add(nuevo_historial)
     
     try:
@@ -115,93 +120,30 @@ async def realizar_canje(
             detail=f"Error al procesar el canje: {str(e)}"
         )
 
+    mensaje_stock = ""
+    if canje.stock_actual <= 0:
+        mensaje_stock = f" ¡Felicidades! Obtuviste la última unidad disponible."
+
     return {
-        "message": "¡Canje realizado exitosamente!",
+        "message": f"¡Canje realizado exitosamente!{mensaje_stock}",
         "canje_id": nuevo_historial.id,
         "premio": canje.nombre,
         "puntos_usados": canje.puntos,
         "puntos_restantes": usuario.puntos_disponibles,
         "fecha_vencimiento": fecha_vencimiento.strftime('%d/%m/%Y'),
+        "stock_info": {
+            "stock_restante": canje.stock_actual,
+            "agotado": canje.stock_actual <= 0,
+            "canje_desactivado": not canje.is_active
+        },
         "empresa": {
             "nombre": canje.empresa.nombre,
             "direccion": canje.empresa.direccion
         },
-        "instrucciones": [
-            "Revisa tu email para obtener el código QR",
-            "Ve al comercio indicado",
-            "Muestra el QR al personal",
-            "Presenta tu DNI para validar",
-            "¡Disfruta tu premio!"
-        ],
         "email_enviado": email_enviado
     }
 
-@router.get("/mis-canjes/")
-async def obtener_mis_canjes(
-    db: Session = Depends(get_db),
-    Authorize: AuthJWT = Depends()
-):
-    """
-    Lista los canjes realizados por el usuario autenticado.
-    """
-    Authorize.jwt_required()
-    user_dni_str = Authorize.get_jwt_subject()
-    
-    try:
-        user_dni = int(user_dni_str)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="DNI en token JWT inválido."
-        )
 
-    canjes_usuario = db.query(
-        HistorialCanjeModel.id,
-        HistorialCanjeModel.puntos_usados,
-        HistorialCanjeModel.fecha_canje,
-        HistorialCanjeModel.fecha_vencimiento,
-        HistorialCanjeModel.qr_usado,
-        HistorialCanjeModel.fecha_uso,
-        CanjeModel.nombre.label('premio_nombre'),
-        CanjeModel.descripcion.label('premio_descripcion'),
-        Empresa.nombre.label('empresa_nombre'),
-        Empresa.direccion.label('empresa_direccion')
-    ).join(
-        CanjeModel, HistorialCanjeModel.canje_id == CanjeModel.id
-    ).join(
-        Empresa, CanjeModel.empresa_id == Empresa.id
-    ).filter(
-        HistorialCanjeModel.usuario_dni == user_dni
-    ).order_by(
-        HistorialCanjeModel.fecha_canje.desc()
-    ).all()
-
-    canjes_formateados = []
-    for canje in canjes_usuario:
-        estado = "Usado" if canje.qr_usado else ("Vencido" if canje.fecha_vencimiento < datetime.now() else "Activo")
-        
-        canjes_formateados.append({
-            "id": canje.id,
-            "premio": canje.premio_nombre,
-            "descripcion": canje.premio_descripcion,
-            "puntos_usados": canje.puntos_usados,
-            "fecha_canje": canje.fecha_canje.strftime('%d/%m/%Y %H:%M'),
-            "fecha_vencimiento": canje.fecha_vencimiento.strftime('%d/%m/%Y'),
-            "estado": estado,
-            "fecha_uso": canje.fecha_uso.strftime('%d/%m/%Y %H:%M') if canje.fecha_uso else None,
-            "empresa": {
-                "nombre": canje.empresa_nombre,
-                "direccion": canje.empresa_direccion
-            }
-        })
-
-    return {
-        "total_canjes": len(canjes_formateados),
-        "canjes": canjes_formateados
-    }
-
-
-###############################################
 @router.get("/", response_model=list[HistorialCanjeDetalladoResponse])
 async def obtener_historial_canjes(
     db: Session = Depends(get_db),

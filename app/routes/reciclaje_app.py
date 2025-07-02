@@ -1,7 +1,7 @@
 from io import BytesIO
 from fastapi import APIRouter, HTTPException, Depends, status, Body
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import func
+from datetime import datetime
 from fastapi_jwt_auth import AuthJWT
 
 from app.db.connection import get_db
@@ -69,7 +69,7 @@ async def confirmar_reciclaje_por_qr_app(
     db.add(nuevo_reciclaje)
 
     qr_token_db.is_used = True
-    qr_token_db.used_at = func.now()
+    qr_token_db.used_at = datetime.now()
 
     usuario_actual.puntos_disponibles = (usuario_actual.puntos_disponibles or 0) + puntos_calculados
 
@@ -85,3 +85,52 @@ async def confirmar_reciclaje_por_qr_app(
 
     return nuevo_reciclaje
 
+@router.get("/historial/", response_model=list[ReciclajeHistorialResponse])
+async def obtener_historial_reciclajes(
+    db: Session = Depends(get_db),
+    Authorize: AuthJWT = Depends()
+):
+    """
+    Obtiene el historial de reciclajes del usuario autenticado.
+    Incluye detalles del reciclaje y del QR token usado.
+    """
+    Authorize.jwt_required()
+    user_dni_str = Authorize.get_jwt_subject()
+
+    try:
+        user_dni = int(user_dni_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="DNI en token JWT inválido."
+        )
+    reciclajes_query = db.query(
+        Reciclaje.id,
+        Reciclaje.puntos,
+        QRToken.used_at.label('fecha_reciclaje'),
+        QRToken.peso,
+        QRToken.cantidad_botellas,
+        QRToken.id_cesto
+    ).join(
+        QRToken, Reciclaje.qr_token_id == QRToken.id
+
+    ).filter(
+        Reciclaje.usuario_dni == user_dni
+    ).order_by(QRToken.used_at.desc())
+
+    reciclajes_data = reciclajes_query.all()
+
+    historial = []
+
+    for r in reciclajes_data:
+
+        historial.append({
+            "id": r.id,
+            "puntos": r.puntos,
+            "fecha_reciclaje": r.fecha_reciclaje,
+            "peso": r.peso,
+            "cantidad_botellas": r.cantidad_botellas,
+            "id_cesto": r.id_cesto
+        })
+
+    return historial

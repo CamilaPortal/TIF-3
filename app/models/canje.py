@@ -11,6 +11,9 @@ class Canje(Base):
     descripcion = Column(String(500), nullable=False)
     puntos = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+
+    stock_inicial = Column(Integer, nullable=False)
+    stock_actual = Column(Integer, nullable=False)
     
     empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     empresa = relationship("Empresa", back_populates="canjes")

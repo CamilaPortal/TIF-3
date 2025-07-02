@@ -11,7 +11,7 @@ class QRToken(Base):
     id_cesto = Column(String(50), index=True, nullable=False)
     token = Column(String(255), unique=True, index=True, nullable=False)
     is_used = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True))
     used_at = Column(DateTime(timezone=True), nullable=True) 
     
     peso = Column(Float, nullable=False) 
