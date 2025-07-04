@@ -14,7 +14,7 @@ class QRToken(Base):
     created_at = Column(DateTime(timezone=True))
     used_at = Column(DateTime(timezone=True), nullable=True) 
     
-    peso = Column(Float, nullable=False) 
+    peso = Column(Integer, nullable=False) 
     cantidad_botellas = Column(Integer, nullable=False)
 
 

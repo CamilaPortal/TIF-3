@@ -18,7 +18,7 @@ class ReciclajeHistorialResponse(BaseModel):
     id: int
     puntos: int
     fecha_reciclaje: datetime
-    peso: float
+    peso: int
     cantidad_botellas: int
     id_cesto: str
     
